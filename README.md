@@ -56,6 +56,9 @@ Script fourni dans database.sql :
 
 - users (id, name, email, password, created_at)
 - roles, user_roles (bonus)
+- login_attempts (anti-bruteforce)
+- user_sessions (historique des sessions)
+- audit_logs (journal d'audit)
 
 ## Securite
 
@@ -65,14 +68,35 @@ Script fourni dans database.sql :
 - Expiration par inactivite
 - Empreinte de session basee sur user-agent
 - CSRF token sur tous les formulaires
+- Mots de passe renforces + blacklist
+- Anti-bruteforce par tentatives
+- Journalisation securite (audit)
 - Cookies HttpOnly / Secure / SameSite
+
+## Gestion des erreurs
+
+- Gestion centralisee des erreurs/exception
+- Page HTTP commune (401/403/404/405)
+- Logs applicatifs dans storage/error.log
 
 ## Configuration importante
 
 - APP_SECRET : cle privee pour signer les cookies "remember-me".
+- APP_DEBUG : affiche les erreurs en dev (false en prod).
+- ERROR_LOG_FILE : chemin du log d'erreurs.
 - SESSION_LIFETIME : duree d'inactivite autorisee.
 - SESSION_REGEN_INTERVAL : rotation periodique de session.
+- LOGIN_ATTEMPT_LIMIT / LOGIN_ATTEMPT_WINDOW : limites anti-bruteforce.
 - REMEMBER_LIFETIME : duree du cookie "remember-me".
+
+## Branches (organisation)
+
+- auth-mvc : base MVC + authentification (structure et routes).
+- securite-session : sessions durcies + CSRF + regles mdp.
+- securite-logs : anti-bruteforce + logs + sessions en base.
+- front-auth : UI auth + CSS.
+- docs : README + documentation.
+- error : page HTTP + gestion 401/403/404/405.
 
 ## URLs utiles
 

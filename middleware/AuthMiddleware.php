@@ -11,15 +11,21 @@ final class AuthMiddleware
     public static function requireAuth(): void
     {
         if (!is_logged_in()) {
-            set_flash('error', 'Acces refuse. Connectez-vous.');
-            redirect('index.php?url=auth/login');
+            respond_http_error(401, 'Acces refuse. Connectez-vous.');
         }
     }
 
     public static function requireGuest(): void
     {
         if (is_logged_in()) {
-            redirect('index.php?url=auth/profile');
+            respond_http_error(403, 'Acces refuse.');
+        }
+    }
+
+    public static function requireAdmin(): void
+    {
+        if (!self::isAdmin()) {
+            respond_http_error(403, 'Acces admin requis.');
         }
     }
 

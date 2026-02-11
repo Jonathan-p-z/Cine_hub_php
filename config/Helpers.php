@@ -11,6 +11,92 @@ function e(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+function setup_error_handling(): void
+{
+    error_reporting(E_ALL);
+    ini_set('display_errors', APP_DEBUG ? '1' : '0');
+    ini_set('log_errors', '1');
+    ini_set('error_log', ERROR_LOG_FILE);
+
+    set_error_handler(function (int $severity, string $message, string $file, int $line): bool {
+        if (!(error_reporting() & $severity)) {
+            return false;
+        }
+
+        $exception = new ErrorException($message, 0, $severity, $file, $line);
+        handle_exception($exception);
+        return true;
+    });
+
+    set_exception_handler('handle_exception');
+
+    register_shutdown_function(function (): void {
+        $error = error_get_last();
+        if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+            $exception = new ErrorException($error['message'], 0, $error['type'], $error['file'], $error['line']);
+            handle_exception($exception);
+        }
+    });
+}
+
+function handle_exception(Throwable $exception): void
+{
+    $logMessage = sprintf(
+        "[%s] %s in %s:%d\n%s",
+        date('c'),
+        $exception->getMessage(),
+        $exception->getFile(),
+        $exception->getLine(),
+        $exception->getTraceAsString()
+    );
+    error_log($logMessage);
+
+    if (APP_DEBUG) {
+        http_response_code(500);
+        echo render_error_page('Erreur interne', $exception->getMessage(), $exception);
+        return;
+    }
+
+    http_response_code(500);
+    echo render_error_page('Erreur interne', 'Une erreur est survenue. Merci de reessayer.', null);
+}
+
+function render_error_page(string $title, string $message, ?Throwable $exception): string
+{
+    $details = '';
+    if ($exception !== null) {
+        $details = '<pre>' . e($exception->getFile() . ':' . $exception->getLine()) . "\n" . e($exception->getTraceAsString()) . '</pre>';
+    }
+
+    return '<!doctype html>'
+        . '<html lang="fr"><head><meta charset="utf-8">'
+        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        . '<title>' . e($title) . '</title>'
+        . '<style>body{font-family:Arial,sans-serif;margin:40px;background:#0f172a;color:#e2e8f0}h1{margin:0 0 12px}p{color:#94a3b8}pre{white-space:pre-wrap;background:#111827;padding:16px;border-radius:8px;border:1px solid #1f2937;color:#e2e8f0}</style>'
+        . '</head><body><h1>' . e($title) . '</h1><p>' . e($message) . '</p>' . $details . '</body></html>';
+}
+
+function render_http_error(int $code, string $message): string
+{
+    $viewFile = BASE_PATH . '/views/errors/http.php';
+    if (!is_file($viewFile)) {
+        return render_error_page('Erreur ' . $code, $message, null);
+    }
+
+    ob_start();
+    $title = 'Erreur ' . $code;
+    $details = $message;
+    require $viewFile;
+    return (string) ob_get_clean();
+}
+
+function respond_http_error(int $code, string $message): void
+{
+    http_response_code($code);
+    echo render_http_error($code, $message);
+    exit;
+}
+
 function redirect(string $url): void
 {
     header('Location: ' . $url);

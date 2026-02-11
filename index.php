@@ -6,6 +6,8 @@ define('BASE_PATH', __DIR__);
 require_once BASE_PATH . '/config/config.php';
 require_once BASE_PATH . '/config/Helpers.php';
 
+setup_error_handling();
+
 spl_autoload_register(function (string $class): void {
     $paths = [
         BASE_PATH . '/controllers/' . $class . '.php',
@@ -58,36 +60,31 @@ $rawUrl = trim((string) ($_GET['url'] ?? ''), '/');
 $routeKey = $rawUrl;
 
 if (!array_key_exists($routeKey, $routes)) {
-    http_response_code(404);
-    exit('Not Found');
+    respond_http_error(404, 'Page introuvable.');
 }
 
 $route = $routes[$routeKey];
 $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 
 if (!in_array($method, $route['methods'], true)) {
-    http_response_code(405);
-    exit('Method Not Allowed');
+    respond_http_error(405, 'Methode non autorisee.');
 }
 
 $controllerName = $route['controller'];
 $action = $route['action'];
 
 if (!preg_match('/^[A-Za-z0-9_]+$/', $controllerName) || !preg_match('/^[A-Za-z0-9_]+$/', $action)) {
-    http_response_code(404);
-    exit('Not Found');
+    respond_http_error(404, 'Page introuvable.');
 }
 
 if (!class_exists($controllerName)) {
-    http_response_code(404);
-    exit('Controller not found');
+    respond_http_error(404, 'Controleur introuvable.');
 }
 
 $controller = new $controllerName();
 
 if (!method_exists($controller, $action)) {
-    http_response_code(404);
-    exit('Action not found');
+    respond_http_error(404, 'Action introuvable.');
 }
 
 call_user_func([$controller, $action]);

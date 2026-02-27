@@ -15,6 +15,7 @@ if (!defined('BASE_PATH')) {
     <link rel="stylesheet" href="public/css/style.css">
 </head>
 <body>
+    <?php require BASE_PATH . '/views/partials/nav.php'; ?>
     <div class="page">
         <main class="panel">
             <h1><?php echo e($title); ?></h1>

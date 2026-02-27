@@ -1,81 +1,99 @@
-# Cine Hub PHP - Authentification
+# CineHub PHP
 
-Base technique MVC en PHP natif, centree sur l'authentification et la securite (sans framework). Cette partie ne traite que la gestion des utilisateurs et l'acces securise.
+Application de cinema en PHP natif (sans framework) — affichage de films, reservation de places avec plan de salle interactif, et panel d'administration complet.
 
-## Portee
+## Fonctionnalites
 
-- Architecture MVC stricte (controllers, models, views, config).
-- Router frontal (index.php) avec whitelist des routes et controle des methodes HTTP.
-- Connexion PDO en singleton avec mode d'erreur en exception.
-- CRUD utilisateur + recherches par email / id.
-- Inscription, connexion, deconnexion, modification, suppression du compte.
-- Sessions securisees (regeneration ID, expiration inactivite, empreinte user-agent).
-- Protection CSRF sur tous les formulaires.
-- "Se souvenir de moi" avec cookie signe et rotation apres login.
-- Middleware pour pages protegees.
-- Protection contre acces direct aux fichiers sensibles via .htaccess.
+- Parcourir les films et consulter les seances disponibles
+- Reserver des places avec selection interactive sur plan de salle
+- Historique des reservations utilisateur avec annulation
+- Inscription, connexion, modification et suppression de compte
+- Panel admin : CRUD films, seances, gestion utilisateurs et reservations
+- Architecture MVC stricte sans dependance externe
 
 ## Pre-requis
 
-- PHP 8.1+ avec extensions PDO et pdo_mysql
-- Serveur web (Apache recommande pour .htaccess)
+- PHP 8.1+, extensions PDO et pdo_mysql
+- Apache avec mod_rewrite (pour .htaccess)
 - MySQL ou MariaDB
 
 ## Installation
 
-1. Creer la base de donnees et importer le script SQL :
-   - Fichier : database.sql
-2. Modifier la configuration :
-   - config/config.php (DB_HOST, DB_NAME, DB_USER, DB_PASS, APP_SECRET)
-3. Configurer le serveur web pour pointer sur le dossier du projet.
-4. Ouvrir : index.php?url=auth/login
+1. Importer le schema et les donnees : `sql.sql`
+2. Copier `config/config.php.example` en `config/config.php` et renseigner les valeurs
+3. Pointer le vhost Apache sur le dossier du projet
 
-## Structure du projet
+## Structure
 
-- /config : configuration, base de donnees, helpers, routes
-- /controllers : AuthController
-- /models : User
-- /views : pages login, register, profil
-- /middleware : AuthMiddleware
-- /public : ressources publiques (vide par defaut)
-- index.php : router frontal
+```
+config/         configuration, base de donnees, routes, helpers
+controllers/    AuthController, HomeController, FilmController,
+                ReservationController, AdminController
+models/         User, Film, Seance, Reservation, SecurityLog
+views/          auth/, films/, reservations/, admin/, errors/, partials/
+middleware/     AuthMiddleware
+public/css/     style.css
+index.php       routeur frontal
+sql.sql         schema complet + donnees de test
+```
 
 ## Routage
 
-Les routes sont definies dans config/routes.php et appliquees par index.php. Exemple :
+Toutes les routes sont whitelistees dans `config/routes.php` et dispatchees par `index.php`.
 
-- auth/login (GET, POST)
-- auth/register (GET, POST)
-- auth/profile (GET)
-- auth/update (POST)
-- auth/delete (POST)
+| Route                        | Methode   | Acces       |
+|------------------------------|-----------|-------------|
+| home                         | GET       | public      |
+| films                        | GET       | public      |
+| films/show                   | GET       | public      |
+| auth/login                   | GET, POST | public      |
+| auth/register                | GET, POST | public      |
+| auth/profile                 | GET       | authentifie |
+| auth/update                  | POST      | authentifie |
+| auth/delete                  | POST      | authentifie |
+| auth/logout                  | POST      | authentifie |
+| reservations                 | GET       | authentifie |
+| reservations/seats           | GET, POST | authentifie |
+| reservations/cancel          | POST      | authentifie |
+| admin                        | GET       | admin       |
+| admin/films                  | GET       | admin       |
+| admin/films/create           | GET, POST | admin       |
+| admin/films/edit             | GET, POST | admin       |
+| admin/films/delete           | POST      | admin       |
+| admin/seances                | GET       | admin       |
+| admin/seances/create         | GET, POST | admin       |
+| admin/seances/edit           | GET, POST | admin       |
+| admin/seances/delete         | POST      | admin       |
+| admin/users                  | GET       | admin       |
+| admin/users/delete           | POST      | admin       |
+| admin/reservations           | GET       | admin       |
+| admin/reservations/delete    | POST      | admin       |
 
 ## Base de donnees
 
-Script fourni dans database.sql :
-
-- users (id, name, email, password, created_at)
-- roles, user_roles (bonus)
+- `users`, `roles`, `user_roles` — gestion des utilisateurs et des roles
+- `login_attempts`, `user_sessions`, `audit_logs` — securite et tracabilite
+- `genres`, `films`, `film_genres` — catalogue de films
+- `salles`, `seances` — salles et programmation
+- `reservations`, `reservation_seats` — reservations avec contrainte d'unicite par place et seance
 
 ## Securite
 
-- password_hash() / password_verify()
-- Requetes preparees PDO uniquement
-- Regeneration de session apres login + rotation periodique
-- Expiration par inactivite
+- `password_hash()` / `password_verify()`
+- Requetes preparees PDO uniquement, zero SQL dans les vues
+- CSRF sur tous les formulaires POST
+- Regeneration de session apres login, expiration par inactivite
 - Empreinte de session basee sur user-agent
-- CSRF token sur tous les formulaires
 - Cookies HttpOnly / Secure / SameSite
+- Contrainte UNIQUE sur `(seance_id, seat_row, seat_col)` pour les reservations concurrentes
+- `AuthMiddleware::requireAdmin()` en entete de chaque methode admin
 
-## Configuration importante
+## Configuration
 
-- APP_SECRET : cle privee pour signer les cookies "remember-me".
-- SESSION_LIFETIME : duree d'inactivite autorisee.
-- SESSION_REGEN_INTERVAL : rotation periodique de session.
-- REMEMBER_LIFETIME : duree du cookie "remember-me".
+Copier `config/config.php.example` en `config/config.php` :
 
-## URLs utiles
-
-- index.php?url=auth/login
-- index.php?url=auth/register
-- index.php?url=auth/profile
+- `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` — connexion MySQL
+- `APP_SECRET` — cle de signature des cookies remember-me (changer en production)
+- `APP_DEBUG` — affichage des erreurs (desactiver en production)
+- `SESSION_LIFETIME` — duree d'inactivite en secondes
+- `REMEMBER_LIFETIME` — duree du cookie "se souvenir de moi"

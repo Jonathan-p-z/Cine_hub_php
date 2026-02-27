@@ -17,6 +17,7 @@ $flashMessage = $flash['message'] ?? '';
     <link rel="stylesheet" href="public/css/style.css">
 </head>
 <body>
+    <?php require BASE_PATH . '/views/partials/nav.php'; ?>
     <div class="page">
         <main class="panel">
             <h1>Inscription</h1>
